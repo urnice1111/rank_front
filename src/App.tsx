@@ -44,8 +44,8 @@ function App() {
   return (
     <div className="page">
       <header className="header">
-        <h1>Title</h1>
-        <p className="subtitle">Subtitle</p>
+        <h1>Rank Tec CEM</h1>
+        <p className="subtitle">Rankear que? Tu decide. (Algunas de las fotos no seran relevantes por como estan scrappeadas, tengan paciencia :) )</p>
       </header>
 
       <main className="choices" role="radiogroup" aria-label="Image choice">
