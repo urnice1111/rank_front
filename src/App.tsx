@@ -38,6 +38,7 @@ function Portrait({ persona }: { persona: Persona }) {
 
 function App() {
   const [pair, setPair] = useState<[Persona, Persona] | null>(null)
+  const [leader, setLeader] = useState<Persona | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,12 +57,24 @@ function App() {
     setError(null)
   }
 
+  async function loadTop(signal?: AbortSignal) {
+    const response = await fetch(`${API_URL}/top`, { signal })
+    if (!response.ok) throw new Error('No se pudo cargar el primero')
+
+    const data = (await response.json()) as Persona[]
+    setLeader(Array.isArray(data) ? (data[0] ?? null) : null)
+  }
+
   useEffect(() => {
     const controller = new AbortController()
 
     loadMatch(controller.signal).catch((loadError: unknown) => {
       if (loadError instanceof DOMException && loadError.name === 'AbortError') return
       setError('No se pudieron cargar los profesores.')
+    })
+
+    loadTop(controller.signal).catch((loadError: unknown) => {
+      if (loadError instanceof DOMException && loadError.name === 'AbortError') return
     })
 
     return () => controller.abort()
@@ -87,7 +100,7 @@ function App() {
       })
       if (!response.ok) throw new Error('No se pudo registrar el voto')
       recorded = true
-      await loadMatch()
+      await Promise.all([loadMatch(), loadTop().catch(() => undefined)])
     } catch {
       setSelectedId(null)
       setError(
@@ -150,10 +163,23 @@ function App() {
             )
           })}
         </main>
+
+        {leader && (
+          <aside className="leader">
+            <p className="leader-label">Más votado hasta ahora</p>
+            <div className="leader-photo">
+              <Portrait persona={leader} />
+            </div>
+            <p className="description">
+              {displayName(leader)}
+              {leader.department && <span className="department">{leader.department}</span>}
+            </p>
+          </aside>
+        )}
       </section>
 
       <footer className="footer">
-        <span className="version">v1.0</span>
+        <span className="version">v1.0.1</span>
       </footer>
     </div>
   )
