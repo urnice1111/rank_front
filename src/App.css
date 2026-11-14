@@ -108,6 +108,10 @@
   outline-offset: 3px;
 }
 
+.holder:disabled {
+  cursor: default;
+}
+
 .holder.selected {
   border-color: var(--tec);
 }
@@ -131,6 +135,20 @@
   color: #111;
   text-align: center;
   overflow-wrap: break-word;
+}
+
+.department {
+  display: block;
+  margin-top: 2px;
+  color: #555;
+  font-weight: 400;
+}
+
+.status {
+  margin: 12px 0 0;
+  text-align: center;
+  color: #9a1b1b;
+  font-size: 14px;
 }
 
 .footer {

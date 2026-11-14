@@ -1,45 +1,107 @@
 import { Fragment, useEffect, useState } from 'react'
 import './App.css'
 
-// Endpoint that returns { images: [url, url] }. Leave empty to keep placeholders.
-const IMAGE_API_URL = ''
+const API_URL = 'http://216.238.90.223:3000'
 
-type ImageApiResponse = {
-  images?: string[]
+type Persona = {
+  id: string
+  name: string
+  apellidos: string | null
+  department: string | null
+  image_url: string | null
+  score: number
+}
+
+function displayName(persona: Persona) {
+  return [persona.name, persona.apellidos].filter(Boolean).join(' ')
+}
+
+function Portrait({ persona }: { persona: Persona }) {
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setFailed(false)
+  }, [persona.image_url])
+
+  if (!persona.image_url || failed) {
+    return <span className="placeholder">{displayName(persona)}</span>
+  }
+
+  return (
+    <img
+      src={persona.image_url}
+      alt=""
+      onError={() => setFailed(true)}
+    />
+  )
 }
 
 function App() {
-  const [images, setImages] = useState<[string | null, string | null]>([
-    null,
-    null,
-  ])
-  const [selected, setSelected] = useState<0 | 1 | null>(null)
+  const [pair, setPair] = useState<[Persona, Persona] | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function loadMatch(signal?: AbortSignal) {
+    const response = await fetch(`${API_URL}/match`, { signal })
+    if (!response.ok) throw new Error('No se pudo cargar el par')
+
+    const data = (await response.json()) as Persona[]
+    if (!Array.isArray(data) || data.length < 2) {
+      throw new Error('No hay suficientes profesores')
+    }
+
+    setPair([data[0], data[1]])
+    setSelectedId(null)
+    setError(null)
+  }
 
   useEffect(() => {
-    if (!IMAGE_API_URL) return
-
     const controller = new AbortController()
 
-    fetch(IMAGE_API_URL, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error('Image request failed')
-        return response.json() as Promise<ImageApiResponse | string[]>
-      })
-      .then((data) => {
-        const urls = Array.isArray(data) ? data : data.images
-        setImages([urls?.[0] ?? null, urls?.[1] ?? null])
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return
-      })
+    loadMatch(controller.signal).catch((loadError: unknown) => {
+      if (loadError instanceof DOMException && loadError.name === 'AbortError') return
+      setError('No se pudieron cargar los profesores.')
+    })
 
     return () => controller.abort()
   }, [])
 
-  const choices = [
-    { side: 'Left', description: 'Left description.' },
-    { side: 'Right', description: 'Right description.' },
-  ] as const
+  async function vote(winner: Persona) {
+    if (!pair || busy) return
+
+    const loser = pair.find((persona) => persona.id !== winner.id)
+    if (!loser) return
+
+    setSelectedId(winner.id)
+    setBusy(true)
+    setError(null)
+
+    let recorded = false
+
+    try {
+      const response = await fetch(`${API_URL}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winnerId: winner.id, loserId: loser.id }),
+      })
+      if (!response.ok) throw new Error('No se pudo registrar el voto')
+      recorded = true
+      await loadMatch()
+    } catch {
+      setSelectedId(null)
+      setError(
+        recorded
+          ? 'El voto se registró, pero no se pudo cargar el siguiente par.'
+          : 'No se pudo registrar el voto.',
+      )
+      if (recorded) setPair(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const slots = pair ?? [null, null]
 
   return (
     <div className="page">
@@ -50,16 +112,15 @@ function App() {
       <section className="canvas">
         <p className="tagline">Rankear que? Tu decide.</p>
         <p className="prompt">Algunos nombres y fotos podrian ser irrelevantes</p>
+        {error && <p className="status">{error}</p>}
 
-        <main className="choices" role="radiogroup" aria-label="Image choice">
-          {images.map((src, index) => {
-            const choice = index as 0 | 1
-            const isSelected = selected === choice
-            const { side, description } = choices[choice]
+        <main className="choices" aria-label="Elige al profesor">
+          {slots.map((persona, index) => {
+            const isSelected = persona !== null && selectedId === persona.id
 
             return (
-              <Fragment key={choice}>
-                {choice === 1 && (
+              <Fragment key={persona?.id ?? index}>
+                {index === 1 && (
                   <span className="or" aria-hidden="true">
                     o
                   </span>
@@ -67,19 +128,23 @@ function App() {
                 <div className="choice">
                   <button
                     type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    aria-label={src ? `${side} photo` : `${side} photo placeholder`}
+                    aria-label={persona ? `Votar por ${displayName(persona)}` : 'Cargando profesor'}
                     className={isSelected ? 'holder selected' : 'holder'}
-                    onClick={() => setSelected(choice)}
+                    disabled={!persona || busy}
+                    onClick={() => persona && vote(persona)}
                   >
-                    {src ? (
-                      <img src={src} alt="" />
+                    {persona ? (
+                      <Portrait persona={persona} />
                     ) : (
-                      <span className="placeholder">{side}</span>
+                      <span className="placeholder">Cargando</span>
                     )}
                   </button>
-                  <p className="description">{description}</p>
+                  <p className="description">
+                    {persona ? displayName(persona) : 'Cargando'}
+                    {persona?.department && (
+                      <span className="department">{persona.department}</span>
+                    )}
+                  </p>
                 </div>
               </Fragment>
             )
