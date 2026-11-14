@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import './App.css'
 
 // Endpoint that returns { images: [url, url] }. Leave empty to keep placeholders.
@@ -43,38 +43,53 @@ function App() {
 
   return (
     <div className="page">
-      <header className="header">
+      <header className="titlebar">
         <h1>Rank Tec CEM</h1>
-        <p className="subtitle">Rankear que? Tu decide. (Algunas de las fotos no seran relevantes por como estan scrappeadas, tengan paciencia :) )</p>
       </header>
 
-      <main className="choices" role="radiogroup" aria-label="Image choice">
-        {images.map((src, index) => {
-          const choice = index as 0 | 1
-          const isSelected = selected === choice
-          const { side, description } = choices[choice]
+      <section className="canvas">
+        <p className="tagline">Rankear que? Tu decide.</p>
+        <p className="prompt">Algunos nombres y fotos podrian ser irrelevantes</p>
 
-          return (
-            <div className="choice" key={choice}>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                aria-label={src ? `${side} photo` : `${side} photo placeholder`}
-                className={isSelected ? 'holder selected' : 'holder'}
-                onClick={() => setSelected(choice)}
-              >
-                {src ? (
-                  <img src={src} alt="" />
-                ) : (
-                  <span className="placeholder">{side}</span>
+        <main className="choices" role="radiogroup" aria-label="Image choice">
+          {images.map((src, index) => {
+            const choice = index as 0 | 1
+            const isSelected = selected === choice
+            const { side, description } = choices[choice]
+
+            return (
+              <Fragment key={choice}>
+                {choice === 1 && (
+                  <span className="or" aria-hidden="true">
+                    o
+                  </span>
                 )}
-              </button>
-              <p className="description">{description}</p>
-            </div>
-          )
-        })}
-      </main>
+                <div className="choice">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={src ? `${side} photo` : `${side} photo placeholder`}
+                    className={isSelected ? 'holder selected' : 'holder'}
+                    onClick={() => setSelected(choice)}
+                  >
+                    {src ? (
+                      <img src={src} alt="" />
+                    ) : (
+                      <span className="placeholder">{side}</span>
+                    )}
+                  </button>
+                  <p className="description">{description}</p>
+                </div>
+              </Fragment>
+            )
+          })}
+        </main>
+      </section>
+
+      <footer className="footer">
+        <span className="version">v1.0</span>
+      </footer>
     </div>
   )
 }
