@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import './App.css'
 
-const API_URL = 'http://216.238.90.223:3000'
+const API_URL = '/api'
 
 type Persona = {
   id: string
