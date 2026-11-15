@@ -41,6 +41,8 @@ function App() {
   const [leader, setLeader] = useState<Persona | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [reportingId, setReportingId] = useState<string | null>(null)
+  const [reportedIds, setReportedIds] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
 
   async function loadMatch(signal?: AbortSignal) {
@@ -79,6 +81,27 @@ function App() {
 
     return () => controller.abort()
   }, [])
+
+  async function reportPhoto(persona: Persona) {
+    if (busy || reportingId || reportedIds.has(persona.id)) return
+
+    setReportingId(persona.id)
+    setError(null)
+
+    try {
+      const response = await fetch(`${API_URL}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ professorID: persona.id }),
+      })
+      if (!response.ok) throw new Error('No se pudo enviar el aviso')
+      setReportedIds((current) => new Set(current).add(persona.id))
+    } catch {
+      setError('No se pudo enviar el aviso.')
+    } finally {
+      setReportingId(null)
+    }
+  }
 
   async function vote(winner: Persona) {
     if (!pair || busy) return
@@ -158,6 +181,16 @@ function App() {
                       <span className="department">{persona.department}</span>
                     )}
                   </p>
+                  <button
+                    type="button"
+                    className="report"
+                    disabled={!persona || busy || reportingId === persona?.id || reportedIds.has(persona?.id ?? '')}
+                    onClick={() => persona && reportPhoto(persona)}
+                  >
+                    {persona && reportedIds.has(persona.id)
+                      ? 'Gracias por avisar'
+                      : '¿No es su foto?'}
+                  </button>
                 </div>
               </Fragment>
             )
@@ -179,7 +212,7 @@ function App() {
       </section>
 
       <footer className="footer">
-        <span className="version">v1.0.1</span>
+        <span className="version">v1.0.2</span>
       </footer>
     </div>
   )
