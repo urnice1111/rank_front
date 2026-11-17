@@ -146,7 +146,7 @@ function App() {
       </header>
 
       <section className="canvas">
-        <p className="tagline">Rankear que? Tu decide.</p>
+        <p className="tagline">Who is hotter?</p>
         <p className="prompt">Algunos nombres y fotos podrian ser irrelevantes</p>
         {error && <p className="status">{error}</p>}
 
